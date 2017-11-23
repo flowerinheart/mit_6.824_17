@@ -5,5 +5,5 @@ mrtmp.*
 /mapreduce/x.txt
 /pbservice/x.txt
 /kvpaxos/x.txt
-github/*
-golang.org/*
+github.com/
+golang.org/

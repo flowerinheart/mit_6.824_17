@@ -19,7 +19,7 @@ import "sync"
 // (much more than the paper's range of timeouts).
 const RaftElectionTimeout = 1000 * time.Millisecond
 
-func TestInitialElection2A(t *testing.T) {
+func TestInitialElection2A(t *testing.T) { //TestInitialElection
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -35,12 +35,13 @@ func TestInitialElection2A(t *testing.T) {
 	term2 := cfg.checkTerms()
 	if term1 != term2 {
 		fmt.Printf("warning: term changed even though there were no failures")
+		fmt.Printf("\n%d %d", term1, term2)
 	}
 
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestReElection2A(t *testing.T) {
+func TestReElection2A(t *testing.T) { //TestReElection
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -74,9 +75,10 @@ func TestReElection2A(t *testing.T) {
 	cfg.checkOneLeader()
 
 	fmt.Printf("  ... Passed\n")
+
 }
 
-func TestBasicAgree2B(t *testing.T) {
+func TestBasicAgree2B(t *testing.T) { //TestBasicAgree
 	servers := 5
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -99,7 +101,7 @@ func TestBasicAgree2B(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestFailAgree2B(t *testing.T) {
+func TestFailAgree2B(t *testing.T) { //TestFailAgree
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -130,7 +132,7 @@ func TestFailAgree2B(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestFailNoAgree2B(t *testing.T) {
+func TestFailNoAgree2B(t *testing.T) { //TestFailNoAgree
 	servers := 5
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -182,7 +184,7 @@ func TestFailNoAgree2B(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestConcurrentStarts2B(t *testing.T) {
+func TestConcurrentStarts2B(t *testing.T) { //TestConcurrentStarts2B
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -283,7 +285,7 @@ loop:
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestRejoin2B(t *testing.T) {
+func TestRejoin2B(t *testing.T) { //TestRejoin
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -321,7 +323,7 @@ func TestRejoin2B(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestBackup2B(t *testing.T) {
+func TestBackup2B(t *testing.T) { //TestBackup
 	servers := 5
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -393,7 +395,7 @@ func TestBackup2B(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestCount2B(t *testing.T) {
+func TestCount2B(t *testing.T) { //TestCount
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
@@ -503,7 +505,7 @@ loop:
 	fmt.Printf("  ... Passed\n")
 }
 
-func TestPersist12C(t *testing.T) {
+func TestPersist12C(t *testing.T) { //TesstPersist
 	servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
