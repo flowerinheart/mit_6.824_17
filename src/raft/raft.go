@@ -42,6 +42,13 @@ type ApplyMsg struct {
 
 // A Go object implementing a single Raft peer.
 //
+type LogEntry struct {
+	Index   int // Start from 1
+	Term    int
+	Command interface{} // Same as the input in Start()
+}
+
+
 type Raft struct {
 	mu        sync.Mutex          // Lock to protect shared access to this peer's state
 	peers     []*labrpc.ClientEnd // RPC end points of all peers
@@ -66,6 +73,17 @@ type Raft struct {
 	vch        chan *RequestVoteArgs
 	mostVoteCh chan bool
 	ach        chan *AppendEntriesArgs
+
+
+	//for log
+	log   LogEntry[]
+	logRWMU   sync.RWMutex
+	commitIndex int
+	lastApplied int
+
+	nextIndex int[]
+	matchIndex int[]
+	applyCh chan *ApplyMsg
 }
 
 const ( // iota is reset to 0
@@ -79,6 +97,15 @@ const ( // iota is reset to 0
 )
 
 /****************lab2 part1 : (0) helper functions *****************/
+func (rf *Raft) syncGetLastLog() {
+	rf.logRWMU.RLock()
+	defer rf.logRWMU.RULock()
+	return getLastLogIndex()
+}
+func (rf *Raft) getLastLog() {
+	index = len(rf.log) - 1
+	return index, rf.log[index].Term
+}
 func (rf *Raft) getTerm() int {
 	rf.termRWMU.RLock()
 	defer rf.termRWMU.RUnlock()
@@ -153,6 +180,7 @@ type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
 	Term         int
 	CandidateID  int
+	//log, init in AppendEntries rpc
 	LastLogIndex int
 	LastLogTerm  int
 }
@@ -347,13 +375,19 @@ func (rf *Raft) beginElection() {
 type AppendEntriesArgs struct {
 	Term     int
 	LeaderID int
-	//preLogIndex int
-	//prevLog	Term int
+
+	//log
+	PreLogIndex int  // index of log entry immediately precedingnew ones
+	PrevLogTerm int
+	Entries []LogEntry
+	LeaderCommit  int
 }
 
 type AppendEntriesReply struct {
 	Term    int
 	Success bool
+	// optimization, 主要用于快速更新重新上线的leader, 而不是一个一个的增加
+	NextIndex int
 }
 
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
@@ -387,12 +421,28 @@ func (rf *Raft) broadcastAppendEntries() {
 		if i == rf.me {
 			continue
 		}
-		args := AppendEntriesArgs{Term: rf.getTerm(), LeaderID: rf.me}
+		if !rf.isState(Leader) {
+			return
+		}
+		logIndex, logTerm := rf.syncGetLastLog()
+		Term     int
+		LeaderID int
+
+		//log
+		PreLogIndex int  // index of log entry immediately precedingnew ones
+		PrevLogTerm int
+		Entries []LogEntry
+		LeaderCommit  int
+
+		args := AppendEntriesArgs{Term: rf.getTerm(), LeaderID: rf.me, logIndex, logTerm}
 		go func(serverIndex int, args *AppendEntriesArgs) {
 			var reply AppendEntriesReply
 			if rf.isState(Leader) && rf.sendAppendEntries(serverIndex, args, &reply) {
 				rf.mu.Lock()
 				defer rf.mu.Unlock()
+				if !rf.isState(Leader){
+					return
+				}
 				rf.checkTerm(reply.Term)
 				if rf.checkTerm(reply.Term) && reply.Success {
 					go func() {
@@ -426,6 +476,10 @@ func (rf *Raft) changeState(state int) {
 		rf.resetElectionTimer()
 		// rf.resetHeartBeatTimer()
 	case Leader:
+		for i := range rf.peers {
+			rf.nextIndex[i] = len(rf.log) - 1 + 1
+			rf.matchIndex[i] = 0
+		}
 	case Candidate:
 		rf.beginElection()
 	default:
@@ -531,6 +585,13 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.ach = make(chan *AppendEntriesArgs, 10)
 	rf.mostVoteCh = make(chan bool, 10)
 
+	//for 2B log
+	rf.commitIndex = 0
+	rf.lastApplied = 0
+	rf.nextIndex = make([]int, len(rf.peers))
+	rf.matchIndex = make([]int, len(rf.peers))
+	rf.log = make([]LogEntry, 1)
+	rf.applyCh = applyCh
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 	go rf.loop()
